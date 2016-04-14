@@ -1,8 +1,23 @@
 /*
-  LED CLOCK
+ * LED clock
+ *
+ * This is a driver for an Arduino (Nano v3) for controlling a clock made out
+ * of 72 LEDs, 60 of which are in a circle for indicating the current minute
+ * and another 12 for indicating the current hour.
+ *
+ * The LEDs are connected as if it were a LED matrix.
+ * There are 8 rows and 9 columns, and the layout of the LEDs in this matrix
+ * is as displayed in the scheme below.
+ *
+ * The columns are directly attached to pins of the Arduino, while the rows
+ * are controlled via a SIPO (serial in parallel out) shift register
+ * (I used a CD74HC4094E of Texas Instruments).
+ *
+ * Required libraries:
+ * - FrequenyTimer 2
+ *   (http://playground.arduino.cc/Code/FrequencyTimer2)
+ *   This steals pin 3 and 11
  */
-
-/* THIS STEALS PIN 3 AND 11 (http://playground.arduino.cc/Code/FrequencyTimer2) */
 
 /*
  * Relevant links
@@ -12,7 +27,7 @@
  */
 
 /*
- *    MATRIX LAYOUT
+ * Matrix layout (h = hour)
  *
  *   | 0   1   2   3   4   5   6   7   8
  * --+-------------------------------------
