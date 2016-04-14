@@ -68,19 +68,11 @@ void setup() {
   FrequencyTimer2::setOnOverflow(update);
 }
 
-// the loop function runs over and over again forever
 void loop() {
   delay(50);
 
   count += 1;
-  if(count > 60){
-    count = 0;
-  }
-
-  //digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
-  //delay(1000);              // wait for a second
-  //digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
-  //delay(1000);              // wait for a second
+  count %= 60;
 }
 
 void disableRows(){
@@ -104,12 +96,10 @@ void enableRow(int row){
 // Interrupt routine
 void update() {
   disableRows();
-  row++;
-  if (row == ROW_COUNT) {
-    row = 0;
-  }
+  row += 1;
+  row %= ROW_COUNT;
   for (int column = 0; column < COLUMN_COUNT; column++) {
-    if(column + COLUMN_COUNT*row == count){
+    if(column + COLUMN_COUNT * row == count){
       digitalWrite(columns[column], LOW);
     }else{
       digitalWrite(columns[column], HIGH);
