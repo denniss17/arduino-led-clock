@@ -5,6 +5,13 @@
 /* THIS STEALS PIN 3 AND 11 (http://playground.arduino.cc/Code/FrequencyTimer2) */
 
 /*
+ * Relevant links
+ *
+ * http://www.ti.com/lit/ds/symlink/cd54hc4094.pdf
+ * http://playground.arduino.cc/Code/FrequencyTimer2
+ */
+
+/*
  *    MATRIX LAYOUT
  *
  *   | 0   1   2   3   4   5   6   7   8
@@ -22,57 +29,91 @@
 #include <FrequencyTimer2.h>
 
 #define COLUMN_COUNT 9
-#define ROW_COUNT 1
-#define COLUMN_INTERVAL 2000
+#define ROW_COUNT 8
+#define ROW_INTERVAL 2000
 
-byte column = 0;
+byte row = 0;
 
 int hour = 0;
 int minute = 0;
 
+int count = 0;
+
+// Pins for controlling the 4094E shift register.
+int strobePin = A2;
+int dataPin = A0;
+int clockPin = A1;
+
 int columns[COLUMN_COUNT] = {2, 4, 5, 6, 7, 8, 9, 10, 12};
-int rows[ROW_COUNT] = {10};
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-  // initialize digital pin 13 as an output.
+  // Initialize column pins as output
   for(int c = 0; c < COLUMN_COUNT; c++){
     pinMode(columns[c], OUTPUT);
   }
-  for(int r = 0; r < ROW_COUNT; r++){
-    pinMode(rows[r], OUTPUT);
-  }
 
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-  digitalWrite(4, HIGH);
-  digitalWrite(5, LOW);
+  // Initialize shift register pins
+  pinMode(strobePin, OUTPUT);
+  pinMode(dataPin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+  digitalWrite(strobePin, LOW);
+  digitalWrite(clockPin, LOW);
 
   // Turn off toggling of pin 11
   FrequencyTimer2::disable();
   // Set refresh rate (interrupt timeout period) in microseconds
-  FrequencyTimer2::setPeriod(COLUMN_INTERVAL);
+  FrequencyTimer2::setPeriod(ROW_INTERVAL);
   // Set interrupt routine to be called
-  FrequencyTimer2::setOnOverflow(display);
+  FrequencyTimer2::setOnOverflow(update);
 }
 
 // the loop function runs over and over again forever
 void loop() {
+  delay(50);
+
+  count += 1;
+  if(count > 60){
+    count = 0;
+  }
+
   //digitalWrite(13, HIGH);   // turn the LED on (HIGH is the voltage level)
   //delay(1000);              // wait for a second
   //digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
   //delay(1000);              // wait for a second
 }
 
+void disableRows(){
+  // Set the strobe pin to low, so the change will not have immediate effect
+  digitalWrite(strobePin, LOW);
+  // shift out the bits:
+  shiftOut(dataPin, clockPin, MSBFIRST, 0);
+  // Set the strobe pin high to transfer bits to the storage
+  digitalWrite(strobePin, HIGH);
+}
+
+void enableRow(int row){
+  // Set the strobe pin to low, so the change will not have immediate effect
+  digitalWrite(strobePin, LOW);
+  // shift out the bits:
+  shiftOut(dataPin, clockPin, MSBFIRST, 0x01 << row);
+  // Set the strobe pin high to transfer bits to the storage
+  digitalWrite(strobePin, HIGH);
+}
+
 // Interrupt routine
-void display() {
-  digitalWrite(columns[column], HIGH);  // Turn whole previous column off
-  column++;
-  if (column == COLUMN_COUNT) {
-    column = 0;
+void update() {
+  disableRows();
+  row++;
+  if (row == ROW_COUNT) {
+    row = 0;
   }
-  for (int row = 0; row < ROW_COUNT; row++) {
-    digitalWrite(rows[row], HIGH);
+  for (int column = 0; column < COLUMN_COUNT; column++) {
+    if(column + COLUMN_COUNT*row == count){
+      digitalWrite(columns[column], LOW);
+    }else{
+      digitalWrite(columns[column], HIGH);
+    }
   }
-  digitalWrite(columns[column], LOW); // Turn whole column on at once (for equal lighting times)
+  enableRow(row);
 }
