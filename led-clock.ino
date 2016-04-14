@@ -11,7 +11,8 @@
  *
  * The columns are directly attached to pins of the Arduino, while the rows
  * are controlled via a SIPO (serial in parallel out) shift register
- * (I used a CD74HC4094E of Texas Instruments).
+ * (I used a CD74HC4094E of Texas Instruments, but any SIPO with 8 parallel
+ * outputs can be used).
  *
  * Required libraries:
  * - FrequenyTimer 2
@@ -59,9 +60,9 @@ int strobePin = A2;
 int dataPin = A0;
 int clockPin = A1;
 
+// Pins connected to the columns
 int columns[COLUMN_COUNT] = {2, 4, 5, 6, 7, 8, 9, 10, 12};
 
-// the setup function runs once when you press reset or power the board
 void setup() {
   // Initialize column pins as output
   for(int c = 0; c < COLUMN_COUNT; c++){
