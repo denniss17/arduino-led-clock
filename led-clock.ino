@@ -48,20 +48,31 @@
 #define ROW_COUNT 8
 #define ROW_INTERVAL 2000
 
-byte row = 0;
+#define MINUTE_DURATION 60
+
+#define STATE_HOUR 0
+#define STATE_MINUTE 1
+
+// byte row = 0;
 
 int hour = 0;
 int minute = 0;
 
-int count = 0;
+// int count = 0;
+
+int state = STATE_HOUR;
 
 // Pins for controlling the 4094E shift register.
 int strobePin = A2;
 int dataPin = A0;
 int clockPin = A1;
 
+// Pins for reading the DCF 77 device
+int dcfPin = 2;	// Connection pin to DCF 77 device
+int dcfInterruptPin = 0; // Interrupt number associated with pin
+
 // Pins connected to the columns
-int columns[COLUMN_COUNT] = {2, 4, 5, 6, 7, 8, 9, 10, 12};
+int columns[COLUMN_COUNT] = {A3, 4, 5, 6, 7, 8, 9, 10, 12};
 
 void setup() {
   // Initialize column pins as output
@@ -85,10 +96,15 @@ void setup() {
 }
 
 void loop() {
-  delay(50);
+  delay(MINUTE_DURATION);
+  incrementTime();
+}
 
-  count += 1;
-  count %= 60;
+void incrementTime(){
+  minute += 1;
+  hour += (minute / 60);
+  minute %= 60;
+  hour %= 24;
 }
 
 void disableRows(){
@@ -109,10 +125,47 @@ void enableRow(int row){
   digitalWrite(strobePin, HIGH);
 }
 
+void displayMinute(int minute){
+  int row = minute / COLUMN_COUNT;
+  int column = minute % COLUMN_COUNT;
+
+  digitalWrite(columns[column], LOW);
+  enableRow(row);
+}
+
+void displayHour(int hour){
+  int row = ((hour%12)+60) / COLUMN_COUNT;
+  int column = ((hour%12)+60) % COLUMN_COUNT;
+
+  digitalWrite(columns[column], LOW);
+  enableRow(row);
+}
+
+void animateTime(){
+  if(state == STATE_HOUR){
+    displayHour(hour);
+  }else{
+    displayMinute(minute);
+  }
+
+  state = (state == STATE_HOUR) ? STATE_MINUTE : STATE_HOUR;
+}
+
+void clearColumns(){
+  for (int c = 0; c < COLUMN_COUNT; c++) {
+    digitalWrite(columns[c], HIGH);
+  }
+}
+
+
 // Interrupt routine
 void update() {
   disableRows();
-  row += 1;
+  clearColumns();
+  animateTime();
+
+
+  /*row += 1;
   row %= ROW_COUNT;
   for (int column = 0; column < COLUMN_COUNT; column++) {
     if(column + COLUMN_COUNT * row == count){
@@ -121,5 +174,5 @@ void update() {
       digitalWrite(columns[column], HIGH);
     }
   }
-  enableRow(row);
+  enableRow(row);*/
 }
