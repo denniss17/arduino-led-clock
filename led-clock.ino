@@ -114,6 +114,7 @@ void loop() {
 
   Serial.print("Now: ");
   digitalClockDisplay(now());
+  Serial.println(dcf.getBufferPosition());
 
   time_t lastUpdate = dcf.getTime();
   if(lastUpdate != 0){

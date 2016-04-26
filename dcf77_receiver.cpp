@@ -331,6 +331,11 @@ time_t DCF77::getUTCTime(void)
 	}
 }
 
+int DCF77::getBufferPosition(void)
+{
+	return bufferPosition;
+}
+
 /**
  * Initialize parameters
  */

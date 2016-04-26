@@ -90,6 +90,7 @@ public:
 
     static time_t getTime(void);
     static time_t getUTCTime(void);
+    static int getBufferPosition(void);
     static void Start(void);
     static void Stop(void);
     static void int0handler();
