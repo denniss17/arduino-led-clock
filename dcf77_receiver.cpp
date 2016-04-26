@@ -213,7 +213,12 @@ bool DCF77::receivedTimeUpdate(void) {
 		Serial.println("time lag consistent");
 		return true;
 	} else {
-		Serial.println("time lag inconsistent");
+		if(!receivedBefore){
+			Serial.println("time lag inconsistent, but this is the first time something is received");
+			return true;
+		}else{
+			Serial.println("time lag inconsistent");
+		}
 	}
 
 	// If lag is inconsistent, this may be because of no previous stored date
@@ -309,8 +314,9 @@ time_t DCF77::getTime(void)
 	if (!receivedTimeUpdate()) {
 		return(0);
 	} else {
+		receivedBefore = true;
 		// Send out time, taking into account the difference between when the DCF time was received and the current time
-		time_t currentTime =latestupdatedTime + (now() - processingTimestamp);
+		time_t currentTime = latestupdatedTime + (now() - processingTimestamp);
 		return(currentTime);
 	}
 }
@@ -324,6 +330,7 @@ time_t DCF77::getUTCTime(void)
 	if (!receivedTimeUpdate()) {
 		return(0);
 	} else {
+		receivedBefore = true;
 		// Send out time UTC time
 		int UTCTimeDifference = (CEST ? 2 : 1)*SECS_PER_HOUR;
 		time_t currentTime =latestupdatedTime - UTCTimeDifference + (now() - processingTimestamp);
@@ -365,5 +372,6 @@ time_t DCF77::latestupdatedTime= 0;
 time_t DCF77::previousUpdatedTime= 0;
 time_t DCF77::processingTimestamp= 0;
 time_t DCF77::previousProcessingTimestamp=0;
+bool DCF77::receivedBefore = false;
 unsigned char DCF77::CEST=0;
 DCF77::ParityFlags DCF77::flags = {0,0,0,0};

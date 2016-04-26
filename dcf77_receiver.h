@@ -30,6 +30,7 @@ private:
     static time_t latestupdatedTime;
     static  time_t processingTimestamp;
     static  time_t previousProcessingTimestamp;
+    static bool receivedBefore;
     static unsigned char CEST;
     // DCF time format structure
     struct DCF77Buffer {
