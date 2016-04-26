@@ -42,24 +42,27 @@
  * 7 | h3  h4  h5  h6  h7  h8  h9  h10 h11
  */
 
+#include "dcf77_receiver.h"
+//http://www.arduino.cc/playground/Code/Time
+#include <Time.h>
+// http://playground.arduino.cc/Code/FrequencyTimer2
 #include <FrequencyTimer2.h>
 
 #define COLUMN_COUNT 9
 #define ROW_COUNT 8
+
+// The interval in which rows are changed for the LEDs, in microseconds
 #define ROW_INTERVAL 2000
 
-#define MINUTE_DURATION 60
+// The duration of a single second, in milliseconds
+#define SECOND_DURATION 1000
+#define SECONDS_IN_MINUTE 60
 
+// The current hour and minute are displayed sequentially
 #define STATE_HOUR 0
 #define STATE_MINUTE 1
 
-// byte row = 0;
-
-int hour = 0;
-int minute = 0;
-
-// int count = 0;
-
+bool timeReceived = false;
 int state = STATE_HOUR;
 
 // Pins for controlling the 4094E shift register.
@@ -70,11 +73,16 @@ int clockPin = A1;
 // Pins for reading the DCF 77 device
 int dcfPin = 2;	// Connection pin to DCF 77 device
 int dcfInterruptPin = 0; // Interrupt number associated with pin
+DCF77 dcf = DCF77(dcfPin, dcfInterruptPin);
 
 // Pins connected to the columns
 int columns[COLUMN_COUNT] = {A3, 4, 5, 6, 7, 8, 9, 10, 12};
 
 void setup() {
+  Serial.begin(9600);
+
+  Serial.println("Initalizing PINS");
+
   // Initialize column pins as output
   for(int c = 0; c < COLUMN_COUNT; c++){
     pinMode(columns[c], OUTPUT);
@@ -87,24 +95,56 @@ void setup() {
   digitalWrite(strobePin, LOW);
   digitalWrite(clockPin, LOW);
 
+  Serial.println("Enabling timer");
+
   // Turn off toggling of pin 11
   FrequencyTimer2::disable();
   // Set refresh rate (interrupt timeout period) in microseconds
   FrequencyTimer2::setPeriod(ROW_INTERVAL);
   // Set interrupt routine to be called
   FrequencyTimer2::setOnOverflow(update);
+
+  Serial.println("Starting DCF77 receiver");
+
+  dcf.Start();
 }
 
 void loop() {
-  delay(MINUTE_DURATION);
-  incrementTime();
+  delay(SECOND_DURATION);
+
+  Serial.print("Now: ");
+  digitalClockDisplay(now());
+
+  time_t lastUpdate = dcf.getTime();
+  if(lastUpdate != 0){
+    timeReceived = true;
+    setTime(lastUpdate);
+  }
 }
 
-void incrementTime(){
-  minute += 1;
-  hour += (minute / 60);
-  minute %= 60;
-  hour %= 24;
+void digitalClockDisplay(time_t _time){
+  tmElements_t tm;
+  breakTime(_time, tm);
+
+  Serial.println("");
+  Serial.print("Time: ");
+  Serial.print(tm.Hour);
+  Serial.print(":");
+  printDigits(tm.Minute);
+  Serial.print(":");
+  printDigits(tm.Second);
+  Serial.print(" Date: ");
+  Serial.print(tm.Day);
+  Serial.print(".");
+  Serial.print(tm.Month);
+  Serial.print(".");
+  Serial.println(tm.Year+1970);
+}
+
+void printDigits(int digits){
+  if(digits < 10)
+    Serial.print('0');
+  Serial.print(digits);
 }
 
 void disableRows(){
@@ -125,17 +165,17 @@ void enableRow(int row){
   digitalWrite(strobePin, HIGH);
 }
 
-void displayMinute(int minute){
-  int row = minute / COLUMN_COUNT;
-  int column = minute % COLUMN_COUNT;
+void displayMinute(){
+  int row = minute() / COLUMN_COUNT;
+  int column = minute() % COLUMN_COUNT;
 
   digitalWrite(columns[column], LOW);
   enableRow(row);
 }
 
-void displayHour(int hour){
-  int row = ((hour%12)+60) / COLUMN_COUNT;
-  int column = ((hour%12)+60) % COLUMN_COUNT;
+void displayHour(){
+  int row = ((hour()%12)+60) / COLUMN_COUNT;
+  int column = ((hour()%12)+60) % COLUMN_COUNT;
 
   digitalWrite(columns[column], LOW);
   enableRow(row);
@@ -143,9 +183,9 @@ void displayHour(int hour){
 
 void animateTime(){
   if(state == STATE_HOUR){
-    displayHour(hour);
+    displayHour();
   }else{
-    displayMinute(minute);
+    displayMinute();
   }
 
   state = (state == STATE_HOUR) ? STATE_MINUTE : STATE_HOUR;
