@@ -54,16 +54,16 @@
 // The interval in which rows are changed for the LEDs, in microseconds
 #define ROW_INTERVAL 2000
 
-// The duration of a single second, in milliseconds
-#define SECOND_DURATION 1000
-#define SECONDS_IN_MINUTE 60
+// The interval in which the DCF module should be checked for the current time, in milliseconds
+#define TIME_CHECK_INTERVAL 1000
 
 // The current hour and minute are displayed sequentially
-#define STATE_HOUR 0
-#define STATE_MINUTE 1
+#define STATE_RECEIVING_TIME 0
+#define STATE_DISPLAYING_MINUTE 1
+#define STATE_DISPLAYING_HOUR 2
 
-bool timeReceived = false;
-int state = STATE_HOUR;
+int currentRow = 0;
+int state = STATE_RECEIVING_TIME;
 
 // Pins for controlling the 4094E shift register.
 int strobePin = A2;
@@ -110,41 +110,39 @@ void setup() {
 }
 
 void loop() {
-  delay(SECOND_DURATION);
-
-  Serial.print("Now: ");
-  digitalClockDisplay(now());
-  Serial.println(dcf.getBufferPosition());
-
   time_t lastUpdate = dcf.getTime();
   if(lastUpdate != 0){
-    timeReceived = true;
     setTime(lastUpdate);
+    Serial.println("Time received: ");
+    digitalClockDisplay(lastUpdate);
+    state = STATE_DISPLAYING_HOUR;
   }
+
+  delay(TIME_CHECK_INTERVAL);
 }
 
 void digitalClockDisplay(time_t _time){
   tmElements_t tm;
   breakTime(_time, tm);
 
-  Serial.println("");
   Serial.print("Time: ");
-  Serial.print(tm.Hour);
+  printDigits(tm.Hour);
   Serial.print(":");
   printDigits(tm.Minute);
   Serial.print(":");
   printDigits(tm.Second);
   Serial.print(" Date: ");
   Serial.print(tm.Day);
-  Serial.print(".");
+  Serial.print("-");
   Serial.print(tm.Month);
-  Serial.print(".");
+  Serial.print("-");
   Serial.println(tm.Year+1970);
 }
 
 void printDigits(int digits){
-  if(digits < 10)
+  if(digits < 10){
     Serial.print('0');
+  }
   Serial.print(digits);
 }
 
@@ -166,31 +164,37 @@ void enableRow(int row){
   digitalWrite(strobePin, HIGH);
 }
 
-void displayMinute(){
-  int row = minute() / COLUMN_COUNT;
-  int column = minute() % COLUMN_COUNT;
+void displayMinute(int minute){
+  int row = minute / COLUMN_COUNT;
+  int column = minute % COLUMN_COUNT;
 
   digitalWrite(columns[column], LOW);
   enableRow(row);
 }
 
-void displayHour(){
-  int row = ((hour()%12)+60) / COLUMN_COUNT;
-  int column = ((hour()%12)+60) % COLUMN_COUNT;
+void displayHour(int hour){
+  int row = ((hour%12)+60) / COLUMN_COUNT;
+  int column = ((hour%12)+60) % COLUMN_COUNT;
 
   digitalWrite(columns[column], LOW);
   enableRow(row);
 }
 
-void animateTime(){
-  if(state == STATE_HOUR){
-    displayHour();
-  }else{
-    displayMinute();
+void displayTillMinute(int value){
+  int row = value / COLUMN_COUNT;
+  int c = -1;
+  if(currentRow < row){
+    c = COLUMN_COUNT;
+  }else if(currentRow == row){
+    c = value % COLUMN_COUNT;
   }
 
-  state = (state == STATE_HOUR) ? STATE_MINUTE : STATE_HOUR;
+  for(int i = 0; i <= c; i++){
+    digitalWrite(columns[i], LOW);
+  }
+  enableRow(currentRow);
 }
+
 
 void clearColumns(){
   for (int c = 0; c < COLUMN_COUNT; c++) {
@@ -198,12 +202,33 @@ void clearColumns(){
   }
 }
 
+void animateReceiveProgress(){
+  displayTillMinute(dcf.getBufferPosition());
+  //displayTillMinute(counter);
+}
+
+void animateTime(){
+  if(state == STATE_DISPLAYING_HOUR){
+    displayHour(hour());
+  }else{
+    displayMinute(minute());
+  }
+
+  state = (state == STATE_DISPLAYING_HOUR) ? STATE_DISPLAYING_MINUTE : STATE_DISPLAYING_HOUR;
+}
 
 // Interrupt routine
 void update() {
   disableRows();
   clearColumns();
-  animateTime();
+  if(state == STATE_RECEIVING_TIME){
+    currentRow += 1;
+    currentRow %= ROW_COUNT;
+    animateReceiveProgress();
+  }else{
+    animateTime();
+  }
+
 
 
   /*row += 1;
