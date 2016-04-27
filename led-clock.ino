@@ -71,7 +71,7 @@ int dataPin = A0;
 int clockPin = A1;
 
 // Pins for reading the DCF 77 device
-int dcfPin = 2;	// Connection pin to DCF 77 device
+int dcfPin = 2; // Connection pin to DCF 77 device
 int dcfInterruptPin = 0; // Interrupt number associated with pin
 DCF77 dcf = DCF77(dcfPin, dcfInterruptPin);
 
@@ -79,166 +79,166 @@ DCF77 dcf = DCF77(dcfPin, dcfInterruptPin);
 int columns[COLUMN_COUNT] = {A3, 4, 5, 6, 7, 8, 9, 10, 12};
 
 void setup() {
-  Serial.begin(9600);
+        Serial.begin(9600);
 
-  Serial.println("Initalizing PINS");
+        Serial.println("Initalizing PINS");
 
-  // Initialize column pins as output
-  for(int c = 0; c < COLUMN_COUNT; c++){
-    pinMode(columns[c], OUTPUT);
-  }
+        // Initialize column pins as output
+        for(int c = 0; c < COLUMN_COUNT; c++) {
+                pinMode(columns[c], OUTPUT);
+        }
 
-  // Initialize shift register pins
-  pinMode(strobePin, OUTPUT);
-  pinMode(dataPin, OUTPUT);
-  pinMode(clockPin, OUTPUT);
-  digitalWrite(strobePin, LOW);
-  digitalWrite(clockPin, LOW);
+        // Initialize shift register pins
+        pinMode(strobePin, OUTPUT);
+        pinMode(dataPin, OUTPUT);
+        pinMode(clockPin, OUTPUT);
+        digitalWrite(strobePin, LOW);
+        digitalWrite(clockPin, LOW);
 
-  Serial.println("Enabling timer");
+        Serial.println("Enabling timer");
 
-  // Turn off toggling of pin 11
-  FrequencyTimer2::disable();
-  // Set refresh rate (interrupt timeout period) in microseconds
-  FrequencyTimer2::setPeriod(ROW_INTERVAL);
-  // Set interrupt routine to be called
-  FrequencyTimer2::setOnOverflow(update);
+        // Turn off toggling of pin 11
+        FrequencyTimer2::disable();
+        // Set refresh rate (interrupt timeout period) in microseconds
+        FrequencyTimer2::setPeriod(ROW_INTERVAL);
+        // Set interrupt routine to be called
+        FrequencyTimer2::setOnOverflow(update);
 
-  Serial.println("Starting DCF77 receiver");
+        Serial.println("Starting DCF77 receiver");
 
-  dcf.Start();
+        dcf.Start();
 }
 
 void loop() {
-  time_t lastUpdate = dcf.getTime();
-  if(lastUpdate != 0){
-    setTime(lastUpdate);
-    Serial.println("Time received: ");
-    digitalClockDisplay(lastUpdate);
-    state = STATE_DISPLAYING_HOUR;
-  }
+        time_t lastUpdate = dcf.getTime();
+        if(lastUpdate != 0) {
+                setTime(lastUpdate);
+                Serial.println("Time received: ");
+                digitalClockDisplay(lastUpdate);
+                state = STATE_DISPLAYING_HOUR;
+        }
 
-  delay(TIME_CHECK_INTERVAL);
+        delay(TIME_CHECK_INTERVAL);
 }
 
 void digitalClockDisplay(time_t _time){
-  tmElements_t tm;
-  breakTime(_time, tm);
+        tmElements_t tm;
+        breakTime(_time, tm);
 
-  Serial.print("Time: ");
-  printDigits(tm.Hour);
-  Serial.print(":");
-  printDigits(tm.Minute);
-  Serial.print(":");
-  printDigits(tm.Second);
-  Serial.print(" Date: ");
-  Serial.print(tm.Day);
-  Serial.print("-");
-  Serial.print(tm.Month);
-  Serial.print("-");
-  Serial.println(tm.Year+1970);
+        Serial.print("Time: ");
+        printDigits(tm.Hour);
+        Serial.print(":");
+        printDigits(tm.Minute);
+        Serial.print(":");
+        printDigits(tm.Second);
+        Serial.print(" Date: ");
+        Serial.print(tm.Day);
+        Serial.print("-");
+        Serial.print(tm.Month);
+        Serial.print("-");
+        Serial.println(tm.Year+1970);
 }
 
 void printDigits(int digits){
-  if(digits < 10){
-    Serial.print('0');
-  }
-  Serial.print(digits);
+        if(digits < 10) {
+                Serial.print('0');
+        }
+        Serial.print(digits);
 }
 
 void disableRows(){
-  // Set the strobe pin to low, so the change will not have immediate effect
-  digitalWrite(strobePin, LOW);
-  // shift out the bits:
-  shiftOut(dataPin, clockPin, MSBFIRST, 0);
-  // Set the strobe pin high to transfer bits to the storage
-  digitalWrite(strobePin, HIGH);
+        // Set the strobe pin to low, so the change will not have immediate effect
+        digitalWrite(strobePin, LOW);
+        // shift out the bits:
+        shiftOut(dataPin, clockPin, MSBFIRST, 0);
+        // Set the strobe pin high to transfer bits to the storage
+        digitalWrite(strobePin, HIGH);
 }
 
 void enableRow(int row){
-  // Set the strobe pin to low, so the change will not have immediate effect
-  digitalWrite(strobePin, LOW);
-  // shift out the bits:
-  shiftOut(dataPin, clockPin, MSBFIRST, 0x01 << row);
-  // Set the strobe pin high to transfer bits to the storage
-  digitalWrite(strobePin, HIGH);
+        // Set the strobe pin to low, so the change will not have immediate effect
+        digitalWrite(strobePin, LOW);
+        // shift out the bits:
+        shiftOut(dataPin, clockPin, MSBFIRST, 0x01 << row);
+        // Set the strobe pin high to transfer bits to the storage
+        digitalWrite(strobePin, HIGH);
 }
 
 void displayMinute(int minute){
-  int row = minute / COLUMN_COUNT;
-  int column = minute % COLUMN_COUNT;
+        int row = minute / COLUMN_COUNT;
+        int column = minute % COLUMN_COUNT;
 
-  digitalWrite(columns[column], LOW);
-  enableRow(row);
+        digitalWrite(columns[column], LOW);
+        enableRow(row);
 }
 
 void displayHour(int hour){
-  int row = ((hour%12)+60) / COLUMN_COUNT;
-  int column = ((hour%12)+60) % COLUMN_COUNT;
+        int row = ((hour%12)+60) / COLUMN_COUNT;
+        int column = ((hour%12)+60) % COLUMN_COUNT;
 
-  digitalWrite(columns[column], LOW);
-  enableRow(row);
+        digitalWrite(columns[column], LOW);
+        enableRow(row);
 }
 
 void displayTillMinute(int value){
-  int row = value / COLUMN_COUNT;
-  int c = -1;
-  if(currentRow < row){
-    c = COLUMN_COUNT;
-  }else if(currentRow == row){
-    c = value % COLUMN_COUNT;
-  }
+        int row = value / COLUMN_COUNT;
+        int c = -1;
+        if(currentRow < row) {
+                c = COLUMN_COUNT;
+        }else if(currentRow == row) {
+                c = value % COLUMN_COUNT;
+        }
 
-  for(int i = 0; i <= c; i++){
-    digitalWrite(columns[i], LOW);
-  }
-  enableRow(currentRow);
+        for(int i = 0; i <= c; i++) {
+                digitalWrite(columns[i], LOW);
+        }
+        enableRow(currentRow);
 }
 
 
 void clearColumns(){
-  for (int c = 0; c < COLUMN_COUNT; c++) {
-    digitalWrite(columns[c], HIGH);
-  }
+        for (int c = 0; c < COLUMN_COUNT; c++) {
+                digitalWrite(columns[c], HIGH);
+        }
 }
 
 void animateReceiveProgress(){
-  displayTillMinute(dcf.getBufferPosition());
-  //displayTillMinute(counter);
+        displayTillMinute(dcf.getBufferPosition());
+        //displayTillMinute(counter);
 }
 
 void animateTime(){
-  if(state == STATE_DISPLAYING_HOUR){
-    displayHour(hour());
-  }else{
-    displayMinute(minute());
-  }
+        if(state == STATE_DISPLAYING_HOUR) {
+                displayHour(hour());
+        }else{
+                displayMinute(minute());
+        }
 
-  state = (state == STATE_DISPLAYING_HOUR) ? STATE_DISPLAYING_MINUTE : STATE_DISPLAYING_HOUR;
+        state = (state == STATE_DISPLAYING_HOUR) ? STATE_DISPLAYING_MINUTE : STATE_DISPLAYING_HOUR;
 }
 
 // Interrupt routine
 void update() {
-  disableRows();
-  clearColumns();
-  if(state == STATE_RECEIVING_TIME){
-    currentRow += 1;
-    currentRow %= ROW_COUNT;
-    animateReceiveProgress();
-  }else{
-    animateTime();
-  }
+        disableRows();
+        clearColumns();
+        if(state == STATE_RECEIVING_TIME) {
+                currentRow += 1;
+                currentRow %= ROW_COUNT;
+                animateReceiveProgress();
+        }else{
+                animateTime();
+        }
 
 
 
-  /*row += 1;
-  row %= ROW_COUNT;
-  for (int column = 0; column < COLUMN_COUNT; column++) {
-    if(column + COLUMN_COUNT * row == count){
-      digitalWrite(columns[column], LOW);
-    }else{
-      digitalWrite(columns[column], HIGH);
-    }
-  }
-  enableRow(row);*/
+        /*row += 1;
+           row %= ROW_COUNT;
+           for (int column = 0; column < COLUMN_COUNT; column++) {
+           if(column + COLUMN_COUNT * row == count){
+            digitalWrite(columns[column], LOW);
+           }else{
+            digitalWrite(columns[column], HIGH);
+           }
+           }
+           enableRow(row);*/
 }
