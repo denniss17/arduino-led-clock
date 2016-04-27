@@ -140,13 +140,13 @@ void DCF77::int0handler() {
  * Add new bit to buffer
  */
 inline void DCF77::appendSignal(unsigned char signal) {
-	Serial.println(signal, DEC);
+	Serial.print(signal, DEC);
 	runningBuffer = runningBuffer | ((unsigned long long) signal << bufferPosition);
 	bufferPosition++;
 	if (bufferPosition > 59) {
 		// Buffer is full before at end of time-sequence
 		// this may be due to noise giving additional peaks
-		Serial.println("EoB");
+		Serial.println(" [too full]");
 		finalizeBuffer();
 	}
 }
@@ -157,19 +157,19 @@ inline void DCF77::appendSignal(unsigned char signal) {
 inline void DCF77::finalizeBuffer(void) {
   if (bufferPosition == 59) {
 		// Buffer is full
-		Serial.println("BF");
+		Serial.println(" [correct]");
 		// Prepare filled buffer and time stamp for main loop
 		filledBuffer = runningBuffer;
 		filledTimestamp = now();
 		// Reset running buffer
 		bufferinit();
 		FilledBufferAvailable = true;
-    } else {
+  } else {
 		// Buffer is not yet full at end of time-sequence
-		Serial.println("EoM");
+		Serial.println(" [not full yet]");
 		// Reset running buffer
 		bufferinit();
-    }
+  }
 }
 
 /**
@@ -183,7 +183,7 @@ bool DCF77::receivedTimeUpdate(void) {
 	}
 	// if buffer is filled, we will process it and see if this results in valid parity
 	if (!processBuffer()) {
-		Serial.println("Invalid parity");
+		Serial.println(" [ERROR: Invalid parity]");
 		return false;
 	}
 
@@ -191,14 +191,14 @@ bool DCF77::receivedTimeUpdate(void) {
 	// we will do some sanity checks on the time
 	time_t processedTime = latestupdatedTime + (now() - processingTimestamp);
 	if (processedTime<MIN_TIME || processedTime>MAX_TIME) {
-		Serial.println("Time outside of bounds");
+		Serial.println(" [ERROR: Time outside of bounds]");
 		return false;
 	}
 
 	// If received time is close to internal clock (2 min) we are satisfied
 	time_t difference = abs(processedTime - now());
 	if(difference < 2*SECS_PER_MIN) {
-		Serial.println("close to internal clock");
+		Serial.println(" [INFO: close to internal clock]");
 		storePreviousTime();
 		return true;
 	}
@@ -210,14 +210,14 @@ bool DCF77::receivedTimeUpdate(void) {
 	time_t shiftDifference = abs(shiftCurrent-shiftPrevious);
 	storePreviousTime();
 	if(shiftDifference < 2*SECS_PER_MIN) {
-		Serial.println("time lag consistent");
+		Serial.println(" [INFO: time lag consistent]");
 		return true;
 	} else {
 		if(!receivedBefore){
-			Serial.println("time lag inconsistent, but this is the first time something is received");
+			Serial.println(" [INFO: time lag inconsistent, but first time]");
 			return true;
 		}else{
-			Serial.println("time lag inconsistent");
+			Serial.println(" [ERROR: time lag inconsistent]");
 		}
 	}
 
